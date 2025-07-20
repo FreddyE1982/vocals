@@ -118,8 +118,7 @@ static PyMethodDef PyRingBuffer_methods[] = {
     {NULL, NULL, 0, NULL}};
 
 static PyTypeObject PyRingBufferType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "ringbuffer.RingBuffer",
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "ringbuffer.RingBuffer",
     .tp_basicsize = sizeof(PyRingBuffer),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT,

@@ -15,6 +15,15 @@ except Exception as e:
     raise SystemExit("ringbuffer extension not built: %s" % e)
 
 
+def _parse_reference(value):
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return utils.note_to_freq(value)
+
+
 def record_to_file(
     filename,
     duration=5,
@@ -23,6 +32,7 @@ def record_to_file(
     countdown=0,
     metronome_bpm=None,
     show_range=False,
+    reference_freq=None,
 ):
     """Record audio from the default microphone and save to a WAV file."""
     buffer = ringbuffer.RingBuffer(int(samplerate * channels))
@@ -34,6 +44,9 @@ def record_to_file(
             freq = 880 if (countdown - i) % 2 == 0 else 660
             utils.beep(freq, samplerate=samplerate)
             time.sleep(1)
+
+    if reference_freq is not None:
+        utils.beep(reference_freq, samplerate=samplerate)
 
     def callback(indata, frames, time_info, status):
         written = buffer.write(indata.astype("float32").ravel())
@@ -110,6 +123,12 @@ def main():
         action="store_true",
         help="Print detected pitch range after recording",
     )
+    parser.add_argument(
+        "--reference",
+        type=str,
+        default=None,
+        help="Play a reference note (e.g. A4 or frequency) before recording",
+    )
     args = parser.parse_args()
     record_to_file(
         args.outfile,
@@ -118,6 +137,7 @@ def main():
         countdown=args.countdown,
         metronome_bpm=args.bpm,
         show_range=args.show_range,
+        reference_freq=_parse_reference(args.reference),
     )
 
 

@@ -149,3 +149,18 @@ def test_pitch_range_method():
     low, high = rec.pitch_range()
     assert low == pytest.approx(220, rel=0.05)
     assert high == pytest.approx(440, rel=0.05)
+
+
+def test_reference_beep(monkeypatch):
+    record_data = np.zeros(4, dtype=np.float32)
+    sd_dummy = DummySD(record_data)
+    monkeypatch.setattr("vocals.multitrack.sd", sd_dummy)
+    beeps = []
+    monkeypatch.setattr(
+        "vocals.multitrack.utils.beep",
+        lambda freq, samplerate=44100: beeps.append(freq),
+    )
+
+    rec = MultiTrackRecorder(num_tracks=1, samplerate=4)
+    rec.record(duration=1, reference_freq=330.0)
+    assert beeps[-1] == 330.0

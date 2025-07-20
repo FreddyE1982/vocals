@@ -26,6 +26,52 @@ def beep(frequency: float, samplerate: int = 44100, duration: float = 0.2) -> No
     sd.wait()
 
 
+def note_to_freq(note: str) -> float:
+    """Return frequency in Hz for a note like ``"A4"``."""
+
+    note = note.strip().upper()
+    if len(note) < 2:
+        raise ValueError("invalid note")
+
+    if note[1] in {"#", "B"}:
+        key = note[:2]
+        rest = note[2:]
+    else:
+        key = note[0]
+        rest = note[1:]
+
+    try:
+        octave = int(rest)
+    except ValueError as exc:
+        raise ValueError("invalid octave") from exc
+
+    offsets = {
+        "C": -9,
+        "C#": -8,
+        "DB": -8,
+        "D": -7,
+        "D#": -6,
+        "EB": -6,
+        "E": -5,
+        "F": -4,
+        "F#": -3,
+        "GB": -3,
+        "G": -2,
+        "G#": -1,
+        "AB": -1,
+        "A": 0,
+        "A#": 1,
+        "BB": 1,
+        "B": 2,
+    }
+
+    if key not in offsets:
+        raise ValueError("invalid note")
+
+    semitones = offsets[key] + 12 * (octave - 4)
+    return 440.0 * (2 ** (semitones / 12))
+
+
 def estimate_pitch(samples: np.ndarray, samplerate: int = 44100) -> float | None:
     """Estimate fundamental frequency of ``samples`` using auto-correlation."""
 
