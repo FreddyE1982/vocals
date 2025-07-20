@@ -338,3 +338,15 @@ class MultiTrackRecorder:
             duration, countdown=countdown, punch_in=True, play_tracks=play_tracks
         )
         self.add_selection_to_library()
+
+    def pitch_range(self, track_index: int | None = None) -> tuple[float, float] | None:
+        """Return the pitch range of ``track_index`` using ``utils.pitch_range``."""
+
+        if track_index is None:
+            track_index = self.selected_track
+        if not 0 <= track_index < len(self.tracks):
+            raise ValueError("invalid track index")
+
+        samples = self.tracks[track_index]
+        result = utils.pitch_range(samples, samplerate=self.samplerate)
+        return result

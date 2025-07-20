@@ -18,6 +18,11 @@ recorded using automatic punch‑in recording and are kept together in the
 library. A stored take can be reapplied to replace the current audio for that
 selection.
 
+The ``vocals.utils`` module now provides simple pitch analysis helpers. A
+recorded track's pitch range can be inspected using
+``MultiTrackRecorder.pitch_range``. This helps vocalists monitor the lowest and
+highest notes they hit during a take.
+
 The ``record`` method now accepts a ``metronome_bpm`` argument to play a click
 track while recording. The command line ``record`` tool also supports a
 ``--bpm`` option so vocalists can keep time even when no other tracks are
