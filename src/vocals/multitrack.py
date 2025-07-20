@@ -44,23 +44,63 @@ class MultiTrackRecorder:
             self.tracks[track_index] = np.concatenate([track, pad])
 
     def record(
-        self, duration: float, countdown: int = 0, punch_in: bool = False
+        self,
+        duration: float,
+        countdown: int = 0,
+        punch_in: bool = False,
+        play_tracks: List[int] | None = None,
     ) -> None:
-        """Record for ``duration`` seconds to the selected track."""
+        """Record for ``duration`` seconds to the selected track.
+
+        If ``play_tracks`` is provided, those tracks will be mixed and played
+        back while recording to keep the new recording in sync with the
+        existing material. When ``punch_in`` is ``True`` the current track is
+        muted during the recording window so previously recorded audio does not
+        play over the new take.
+        """
         if sd is None:
             raise RuntimeError("sounddevice is not available")
+
         if countdown > 0:
             for i in range(countdown, 0, -1):
                 print(i)
                 time.sleep(1)
+
         frames = int(duration * self.samplerate)
-        recorded = sd.rec(
-            frames, samplerate=self.samplerate, channels=self.channels, dtype="float32"
-        )
-        sd.wait()
         start = self.position
         end = start + frames
         self._ensure_length(self.selected_track, end)
+
+        playback = None
+        if play_tracks is not None:
+            playback = np.zeros((frames, self.channels), dtype=np.float32)
+            for t in play_tracks:
+                if not 0 <= t < len(self.tracks):
+                    raise ValueError("invalid track index")
+                track = self.tracks[t]
+                if start < len(track):
+                    seg = track[start:end]
+                    if t == self.selected_track and punch_in:
+                        seg = np.zeros_like(seg)
+                    playback[: len(seg), 0] += seg
+
+        if playback is not None:
+            recorded = sd.playrec(
+                playback,
+                samplerate=self.samplerate,
+                channels=self.channels,
+                dtype="float32",
+            )
+        else:
+            recorded = sd.rec(
+                frames,
+                samplerate=self.samplerate,
+                channels=self.channels,
+                dtype="float32",
+            )
+
+        sd.wait()
+
         track = self.tracks[self.selected_track]
         track[start:end] = recorded[:, 0]
         self.position = end
