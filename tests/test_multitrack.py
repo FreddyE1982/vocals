@@ -40,6 +40,24 @@ def test_record_and_play(monkeypatch):
     assert np.allclose(sd_dummy.play_data, sd_dummy.data)
 
 
+def test_record_with_metronome(monkeypatch):
+    record_data = np.zeros(10, dtype=np.float32)
+    sd_dummy = DummySD(record_data)
+    monkeypatch.setattr("vocals.multitrack.sd", sd_dummy)
+    monkeypatch.setattr(
+        "vocals.multitrack.utils.beep_sound",
+        lambda *a, **k: np.ones(3, dtype=np.float32),
+    )
+
+    rec = MultiTrackRecorder(num_tracks=1, samplerate=10)
+    rec.record(duration=1, metronome_bpm=120)
+
+    expected = np.zeros((10, 1), dtype=np.float32)
+    expected[0:3, 0] += 1
+    expected[5:8, 0] += 1
+    assert np.allclose(sd_dummy.play_data, expected)
+
+
 def test_copy_paste_between_tracks():
     rec = MultiTrackRecorder(num_tracks=2, samplerate=1)
     rec.tracks[0] = np.array([1, 2, 3, 4], dtype=np.float32)

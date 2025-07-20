@@ -21,6 +21,7 @@ def record_to_file(
     samplerate=44100,
     channels=1,
     countdown=0,
+    metronome_bpm=None,
 ):
     """Record audio from the default microphone and save to a WAV file."""
     buffer = ringbuffer.RingBuffer(int(samplerate * channels))
@@ -41,8 +42,27 @@ def record_to_file(
         if out:
             recorded.append(np.frombuffer(out, dtype=np.float32))
 
+    stop = None
+    if metronome_bpm:
+        import threading
+
+        stop = threading.Event()
+
+        def metro():
+            interval = 60.0 / metronome_bpm
+            while not stop.is_set():
+                utils.beep(880, samplerate=samplerate, duration=0.05)
+                time.sleep(interval)
+
+        thread = threading.Thread(target=metro)
+        thread.start()
+
     with sd.InputStream(channels=channels, samplerate=samplerate, callback=callback):
         sd.sleep(int(duration * 1000))
+
+    if stop is not None:
+        stop.set()
+        thread.join()
 
     if recorded:
         data = np.concatenate(recorded)
@@ -72,8 +92,20 @@ def main():
         default=0,
         help="Countdown in seconds before recording starts",
     )
+    parser.add_argument(
+        "--bpm",
+        type=int,
+        default=None,
+        help="Play a metronome click at this tempo while recording",
+    )
     args = parser.parse_args()
-    record_to_file(args.outfile, args.duration, args.rate, countdown=args.countdown)
+    record_to_file(
+        args.outfile,
+        args.duration,
+        args.rate,
+        countdown=args.countdown,
+        metronome_bpm=args.bpm,
+    )
 
 
 if __name__ == "__main__":
