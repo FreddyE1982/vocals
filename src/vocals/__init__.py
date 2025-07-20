@@ -1,3 +1,5 @@
 """Vocals recording package."""
 
-__all__ = []
+from .multitrack import MultiTrackRecorder
+
+__all__ = ["MultiTrackRecorder"]
