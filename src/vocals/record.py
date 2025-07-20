@@ -22,6 +22,7 @@ def record_to_file(
     channels=1,
     countdown=0,
     metronome_bpm=None,
+    show_range=False,
 ):
     """Record audio from the default microphone and save to a WAV file."""
     buffer = ringbuffer.RingBuffer(int(samplerate * channels))
@@ -77,6 +78,12 @@ def record_to_file(
         wf.setframerate(samplerate)
         wf.writeframes((data * 32767).astype("<i2").tobytes())
 
+    if show_range and len(data) > 0:
+        result = utils.pitch_range(data, samplerate=samplerate)
+        if result is not None:
+            low, high = result
+            print(f"Pitch range: {low:.1f} Hz - {high:.1f} Hz")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Record vocals to a WAV file")
@@ -98,6 +105,11 @@ def main():
         default=None,
         help="Play a metronome click at this tempo while recording",
     )
+    parser.add_argument(
+        "--show-range",
+        action="store_true",
+        help="Print detected pitch range after recording",
+    )
     args = parser.parse_args()
     record_to_file(
         args.outfile,
@@ -105,6 +117,7 @@ def main():
         args.rate,
         countdown=args.countdown,
         metronome_bpm=args.bpm,
+        show_range=args.show_range,
     )
 
 

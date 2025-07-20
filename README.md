@@ -28,6 +28,15 @@ track while recording. The command line ``record`` tool also supports a
 ``--bpm`` option so vocalists can keep time even when no other tracks are
 available.
 
+When using ``python -m vocals.record`` the ``--show-range`` flag will print the
+detected pitch range of the take once recording finishes. Additionally the
+``vocals.warmup`` module can play a simple ascending and descending scale to
+help warm up the voice:
+
+```bash
+python -m vocals.warmup
+```
+
 ## Usage
 
 ```bash
