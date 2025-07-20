@@ -116,3 +116,29 @@ def pitch_range(
         return None
 
     return min(pitches), max(pitches)
+
+
+def freq_to_note(freq: float) -> str:
+    """Return the closest note name for ``freq`` in Hz."""
+
+    if freq <= 0:
+        raise ValueError("frequency must be positive")
+
+    semitones = round(12 * np.log2(freq / 440.0))
+    note_index = (semitones + 9) % 12
+    octave = 4 + (semitones + 9) // 12
+    names = [
+        "C",
+        "C#",
+        "D",
+        "D#",
+        "E",
+        "F",
+        "F#",
+        "G",
+        "G#",
+        "A",
+        "A#",
+        "B",
+    ]
+    return f"{names[note_index]}{octave}"
