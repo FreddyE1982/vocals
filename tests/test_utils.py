@@ -26,3 +26,8 @@ def test_pitch_range():
 def test_note_to_freq():
     assert utils.note_to_freq("A4") == pytest.approx(440.0, rel=0.001)
     assert utils.note_to_freq("C4") == pytest.approx(261.63, rel=0.01)
+
+
+def test_freq_to_note():
+    assert utils.freq_to_note(440.0) == "A4"
+    assert utils.freq_to_note(261.63) == "C4"

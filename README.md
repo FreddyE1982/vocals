@@ -31,6 +31,8 @@ available.
 The ``record`` command also has a ``--reference`` option to play a short
 reference note before recording begins. Notes can be given as a frequency or a
 note name like ``A4`` which is converted using ``vocals.utils.note_to_freq``.
+The ``vocals.utils.freq_to_note`` helper performs the reverse conversion and
+can be used to display the nearest note for a detected pitch.
 
 When using ``python -m vocals.record`` the ``--show-range`` flag will print the
 detected pitch range of the take once recording finishes. Additionally the
