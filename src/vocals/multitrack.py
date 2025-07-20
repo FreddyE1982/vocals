@@ -53,6 +53,7 @@ class MultiTrackRecorder:
         countdown: int = 0,
         punch_in: bool = False,
         play_tracks: List[int] | None = None,
+        metronome_bpm: int | None = None,
     ) -> None:
         """Record for ``duration`` seconds to the selected track.
 
@@ -60,7 +61,8 @@ class MultiTrackRecorder:
         back while recording to keep the new recording in sync with the
         existing material. When ``punch_in`` is ``True`` the current track is
         muted during the recording window so previously recorded audio does not
-        play over the new take.
+        play over the new take. When ``metronome_bpm`` is set a click track is
+        generated during recording to help vocalists keep time.
         """
         if sd is None:
             raise RuntimeError("sounddevice is not available")
@@ -89,6 +91,15 @@ class MultiTrackRecorder:
                     if t == self.selected_track and punch_in:
                         seg = np.zeros_like(seg)
                     playback[: len(seg), 0] += seg
+
+        if metronome_bpm is not None:
+            if playback is None:
+                playback = np.zeros((frames, self.channels), dtype=np.float32)
+            interval = int(self.samplerate * 60 / metronome_bpm)
+            click = utils.beep_sound(880, samplerate=self.samplerate, duration=0.05)
+            for i in range(0, frames, interval):
+                end_idx = min(i + len(click), frames)
+                playback[i:end_idx, 0] += click[: end_idx - i]
 
         if playback is not None:
             recorded = sd.playrec(
