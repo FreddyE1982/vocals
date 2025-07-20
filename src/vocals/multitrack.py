@@ -20,6 +20,8 @@ class MultiTrackRecorder:
         ]
         self.selected_track = 0
         self.position = 0  # current play/record position in samples
+        self.selection: tuple[int, int, int] | None = None
+        self.clipboard: np.ndarray = np.zeros(0, dtype=np.float32)
 
     def select_track(self, index: int) -> None:
         """Select track index for recording and playback."""
@@ -88,3 +90,65 @@ class MultiTrackRecorder:
         """Stop playback or recording."""
         if sd is not None:
             sd.stop()
+
+    # Editing functionality -------------------------------------------------
+
+    def select_range(
+        self,
+        start_seconds: float,
+        end_seconds: float,
+        track_index: int | None = None,
+    ) -> None:
+        """Select a region on a track between ``start_seconds`` and ``end_seconds``."""
+        if start_seconds < 0 or end_seconds <= start_seconds:
+            raise ValueError("invalid selection range")
+        if track_index is None:
+            track_index = self.selected_track
+        if not 0 <= track_index < len(self.tracks):
+            raise ValueError("invalid track index")
+        start = int(start_seconds * self.samplerate)
+        end = int(end_seconds * self.samplerate)
+        self._ensure_length(track_index, end)
+        self.selection = (track_index, start, end)
+        self.position = start
+
+    def copy(self) -> None:
+        """Copy the currently selected audio to the clipboard."""
+        if self.selection is None:
+            raise RuntimeError("nothing selected")
+        t, start, end = self.selection
+        self.clipboard = self.tracks[t][start:end].copy()
+
+    def cut(self) -> None:
+        """Cut the selected audio to the clipboard."""
+        if self.selection is None:
+            raise RuntimeError("nothing selected")
+        t, start, end = self.selection
+        self.clipboard = self.tracks[t][start:end].copy()
+        track = self.tracks[t]
+        self.tracks[t] = np.concatenate([track[:start], track[end:]])
+        self.position = start
+        self.selection = None
+
+    def paste(self, track_index: int | None = None) -> None:
+        """Paste clipboard audio to ``track_index`` at the current position."""
+        if self.clipboard.size == 0:
+            return
+        if track_index is None:
+            track_index = self.selected_track
+        if not 0 <= track_index < len(self.tracks):
+            raise ValueError("invalid track index")
+        track = self.tracks[track_index]
+        self._ensure_length(track_index, self.position)
+        self.tracks[track_index] = np.concatenate(
+            [track[: self.position], self.clipboard, track[self.position :]]
+        )
+        self.position += len(self.clipboard)
+
+    def move(self, to_track_index: int, position_seconds: float | None = None) -> None:
+        """Move selected audio to ``to_track_index`` at ``position_seconds``."""
+        self.cut()
+        if position_seconds is not None:
+            self.position = int(position_seconds * self.samplerate)
+        self.selected_track = to_track_index
+        self.paste()
