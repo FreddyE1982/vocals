@@ -12,6 +12,11 @@ class DummySD:
         assert frames == len(self.data)
         return self.data.reshape(-1, channels)
 
+    def playrec(self, play_data, samplerate=44100, channels=1, dtype="float32"):
+        # play_data is array with same length as data
+        self.play(play_data, samplerate)
+        return self.rec(len(play_data), samplerate, channels, dtype)
+
     def wait(self):
         pass
 
@@ -76,3 +81,35 @@ def test_import_export_wav(tmp_path):
         frames = wf.readframes(wf.getnframes())
         result = np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32767
     assert np.allclose(result, data, atol=1e-4)
+
+
+def test_playback_during_record(monkeypatch):
+    # track 0 provides playback material while recording track 1
+    record_data = np.array([10, 11, 12, 13], dtype=np.float32)
+    sd_dummy = DummySD(record_data)
+    monkeypatch.setattr("vocals.multitrack.sd", sd_dummy)
+
+    rec = MultiTrackRecorder(num_tracks=2, samplerate=4)
+    rec.tracks[0] = np.array([1, 2, 3, 4], dtype=np.float32)
+    rec.select_track(1)
+    rec.record(duration=1, play_tracks=[0])
+
+    assert np.allclose(rec.tracks[1], record_data)
+    assert np.allclose(sd_dummy.play_data[:, 0], rec.tracks[0])
+
+
+def test_countdown_with_playback(monkeypatch):
+    record_data = np.array([5, 6, 7, 8], dtype=np.float32)
+    sd_dummy = DummySD(record_data)
+    monkeypatch.setattr("vocals.multitrack.sd", sd_dummy)
+
+    sleeps = []
+    monkeypatch.setattr("time.sleep", lambda s: sleeps.append(s))
+
+    rec = MultiTrackRecorder(num_tracks=2, samplerate=4)
+    rec.tracks[0] = np.array([1, 1, 1, 1], dtype=np.float32)
+    rec.select_track(1)
+    rec.record(duration=1, countdown=2, play_tracks=[0])
+
+    assert sleeps == [1, 1]
+    assert np.allclose(sd_dummy.play_data[:, 0], rec.tracks[0])
