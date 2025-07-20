@@ -137,3 +137,15 @@ def test_countdown_with_playback(monkeypatch):
     assert sleeps == [1, 1]
     assert beeps == [880, 660]
     assert np.allclose(sd_dummy.play_data[:, 0], rec.tracks[0])
+
+
+def test_pitch_range_method():
+    sr = 8000
+    rec = MultiTrackRecorder(num_tracks=1, samplerate=sr)
+    t = np.linspace(0, 1, sr, False)
+    part1 = np.sin(2 * np.pi * 220 * t[: sr // 2])
+    part2 = np.sin(2 * np.pi * 440 * t[: sr // 2])
+    rec.tracks[0] = np.concatenate([part1, part2]).astype(np.float32)
+    low, high = rec.pitch_range()
+    assert low == pytest.approx(220, rel=0.05)
+    assert high == pytest.approx(440, rel=0.05)
