@@ -12,6 +12,12 @@ cutting, copying or pasting them between tracks for simple editing. Audio can
 be imported from WAV or MP3 files and a mix of tracks can be exported back to
 WAV or MP3.
 
+The recorder features a simple *take library*. Portions of a track can be
+selected and stored as a take. Additional takes for the same region can be
+recorded using automatic punch‑in recording and are kept together in the
+library. A stored take can be reapplied to replace the current audio for that
+selection.
+
 ## Usage
 
 ```bash

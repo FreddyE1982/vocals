@@ -22,6 +22,8 @@ class MultiTrackRecorder:
         self.position = 0  # current play/record position in samples
         self.selection: tuple[int, int, int] | None = None
         self.clipboard: np.ndarray = np.zeros(0, dtype=np.float32)
+        # map (track_index, start, end) -> List[np.ndarray]
+        self.take_library: dict[tuple[int, int, int], List[np.ndarray]] = {}
 
     def select_track(self, index: int) -> None:
         """Select track index for recording and playback."""
@@ -275,3 +277,49 @@ class MultiTrackRecorder:
             track = self.tracks[i]
             mix[: len(track)] += track
         return mix
+
+    # Take library -----------------------------------------------------------
+
+    def add_selection_to_library(self) -> None:
+        """Store the currently selected audio segment in the take library."""
+        if self.selection is None:
+            raise RuntimeError("nothing selected")
+        t, start, end = self.selection
+        take = self.tracks[t][start:end].copy()
+        key = (t, start, end)
+        self.take_library.setdefault(key, []).append(take)
+
+    def list_takes(self) -> List[np.ndarray]:
+        """Return all takes for the currently selected region."""
+        if self.selection is None:
+            raise RuntimeError("nothing selected")
+        key = self.selection
+        return self.take_library.get(key, [])
+
+    def apply_take(self, index: int) -> None:
+        """Replace the selected region with the take at ``index``."""
+        if self.selection is None:
+            raise RuntimeError("nothing selected")
+        key = self.selection
+        takes = self.take_library.get(key)
+        if not takes or not 0 <= index < len(takes):
+            raise ValueError("invalid take index")
+        t, start, end = key
+        self.tracks[t][start:end] = takes[index]
+
+    def record_take(
+        self,
+        countdown: int = 0,
+        play_tracks: List[int] | None = None,
+    ) -> None:
+        """Record a new take for the selected region and store it."""
+        if self.selection is None:
+            raise RuntimeError("nothing selected")
+        t, start, end = self.selection
+        duration = (end - start) / self.samplerate
+        self.selected_track = t
+        self.position = start
+        self.record(
+            duration, countdown=countdown, punch_in=True, play_tracks=play_tracks
+        )
+        self.add_selection_to_library()
