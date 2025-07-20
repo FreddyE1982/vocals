@@ -105,6 +105,11 @@ def test_countdown_with_playback(monkeypatch):
 
     sleeps = []
     monkeypatch.setattr("time.sleep", lambda s: sleeps.append(s))
+    beeps = []
+    monkeypatch.setattr(
+        "vocals.multitrack.utils.beep",
+        lambda freq, samplerate=44100, duration=0.2: beeps.append(freq),
+    )
 
     rec = MultiTrackRecorder(num_tracks=2, samplerate=4)
     rec.tracks[0] = np.array([1, 1, 1, 1], dtype=np.float32)
@@ -112,4 +117,5 @@ def test_countdown_with_playback(monkeypatch):
     rec.record(duration=1, countdown=2, play_tracks=[0])
 
     assert sleeps == [1, 1]
+    assert beeps == [880, 660]
     assert np.allclose(sd_dummy.play_data[:, 0], rec.tracks[0])

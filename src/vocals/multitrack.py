@@ -1,6 +1,8 @@
 import time
 from typing import List
 
+from . import utils
+
 import numpy as np
 
 try:
@@ -66,6 +68,8 @@ class MultiTrackRecorder:
         if countdown > 0:
             for i in range(countdown, 0, -1):
                 print(i)
+                freq = 880 if (countdown - i) % 2 == 0 else 660
+                utils.beep(freq, samplerate=self.samplerate)
                 time.sleep(1)
 
         frames = int(duration * self.samplerate)
