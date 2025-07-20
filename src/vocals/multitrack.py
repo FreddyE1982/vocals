@@ -152,3 +152,86 @@ class MultiTrackRecorder:
             self.position = int(position_seconds * self.samplerate)
         self.selected_track = to_track_index
         self.paste()
+
+    # Import/Export ---------------------------------------------------------
+
+    def import_audio(self, filename: str, track_index: int | None = None) -> None:
+        """Load a WAV or MP3 file into ``track_index`` replacing its contents."""
+        import os
+        import wave
+
+        if track_index is None:
+            track_index = self.selected_track
+        if not 0 <= track_index < len(self.tracks):
+            raise ValueError("invalid track index")
+
+        ext = os.path.splitext(filename)[1].lower()
+        if ext == ".wav":
+            with wave.open(filename, "rb") as wf:
+                if wf.getnchannels() != self.channels:
+                    raise ValueError("channel count mismatch")
+                if wf.getframerate() != self.samplerate:
+                    raise ValueError("samplerate mismatch")
+                frames = wf.getnframes()
+                data = (
+                    np.frombuffer(wf.readframes(frames), dtype="<i2").astype(np.float32)
+                    / 32767.0
+                )
+        else:
+            try:
+                from pydub import AudioSegment
+            except Exception as e:  # pragma: no cover - optional dependency
+                raise RuntimeError("pydub required for mp3 import") from e
+
+            audio = AudioSegment.from_file(filename)
+            if audio.frame_rate != self.samplerate:
+                audio = audio.set_frame_rate(self.samplerate)
+            if audio.channels != self.channels:
+                audio = audio.set_channels(self.channels)
+            samples = audio.get_array_of_samples()
+            data = np.array(samples, dtype=np.float32) / 32767.0
+
+        self.tracks[track_index] = data
+        self.position = 0
+
+    def export_audio(
+        self, filename: str, track_indices: List[int] | None = None
+    ) -> None:
+        """Mix ``track_indices`` and export to a WAV or MP3 file."""
+        import os
+        import wave
+
+        mix = self.mix_tracks(track_indices)
+        ext = os.path.splitext(filename)[1].lower()
+        if ext == ".wav":
+            with wave.open(filename, "wb") as wf:
+                wf.setnchannels(self.channels)
+                wf.setsampwidth(2)
+                wf.setframerate(self.samplerate)
+                wf.writeframes((mix * 32767).astype("<i2").tobytes())
+        else:
+            try:
+                from pydub import AudioSegment
+            except Exception as e:  # pragma: no cover - optional dependency
+                raise RuntimeError("pydub required for mp3 export") from e
+
+            segment = AudioSegment(
+                (mix * 32767).astype("<i2").tobytes(),
+                frame_rate=self.samplerate,
+                sample_width=2,
+                channels=self.channels,
+            )
+            segment.export(filename, format="mp3")
+
+    def mix_tracks(self, track_indices: List[int] | None = None) -> np.ndarray:
+        """Return a mix of ``track_indices`` or all tracks."""
+        if track_indices is None:
+            track_indices = list(range(len(self.tracks)))
+        max_len = (
+            max(len(self.tracks[i]) for i in track_indices) if track_indices else 0
+        )
+        mix = np.zeros(max_len, dtype=np.float32)
+        for i in track_indices:
+            track = self.tracks[i]
+            mix[: len(track)] += track
+        return mix
