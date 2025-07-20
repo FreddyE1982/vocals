@@ -8,6 +8,8 @@ The package now also includes a basic multi track recorder. The
 within a track and mixing them for playback. Recording can optionally start
 after a countdown and supports punch‑in recording where audio is overwritten
 from the current position.
+The recorder also allows selecting parts of tracks and cutting, copying or
+pasting them between tracks for simple editing.
 
 ## Usage
 

@@ -33,3 +33,23 @@ def test_record_and_play(monkeypatch):
     rec.play()
     assert sd_dummy.play_called
     assert np.allclose(sd_dummy.play_data, sd_dummy.data)
+
+
+def test_copy_paste_between_tracks():
+    rec = MultiTrackRecorder(num_tracks=2, samplerate=1)
+    rec.tracks[0] = np.array([1, 2, 3, 4], dtype=np.float32)
+    rec.select_range(1, 3, track_index=0)
+    rec.copy()
+    rec.position = 4
+    rec.paste(track_index=0)
+    assert np.allclose(rec.tracks[0], np.array([1, 2, 3, 4, 2, 3], dtype=np.float32))
+
+
+def test_cut_move_to_other_track():
+    rec = MultiTrackRecorder(num_tracks=2, samplerate=1)
+    rec.tracks[0] = np.array([1, 2, 3, 4], dtype=np.float32)
+    rec.tracks[1] = np.array([5, 6], dtype=np.float32)
+    rec.select_range(1, 3, track_index=0)
+    rec.move(to_track_index=1, position_seconds=2)
+    assert np.allclose(rec.tracks[0], np.array([1, 4], dtype=np.float32))
+    assert np.allclose(rec.tracks[1], np.array([5, 6, 2, 3], dtype=np.float32))
