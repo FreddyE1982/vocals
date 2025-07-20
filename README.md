@@ -28,6 +28,10 @@ track while recording. The command line ``record`` tool also supports a
 ``--bpm`` option so vocalists can keep time even when no other tracks are
 available.
 
+The ``record`` command also has a ``--reference`` option to play a short
+reference note before recording begins. Notes can be given as a frequency or a
+note name like ``A4`` which is converted using ``vocals.utils.note_to_freq``.
+
 When using ``python -m vocals.record`` the ``--show-range`` flag will print the
 detected pitch range of the take once recording finishes. Additionally the
 ``vocals.warmup`` module can play a simple ascending and descending scale to

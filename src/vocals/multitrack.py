@@ -54,6 +54,7 @@ class MultiTrackRecorder:
         punch_in: bool = False,
         play_tracks: List[int] | None = None,
         metronome_bpm: int | None = None,
+        reference_freq: float | None = None,
     ) -> None:
         """Record for ``duration`` seconds to the selected track.
 
@@ -62,7 +63,9 @@ class MultiTrackRecorder:
         existing material. When ``punch_in`` is ``True`` the current track is
         muted during the recording window so previously recorded audio does not
         play over the new take. When ``metronome_bpm`` is set a click track is
-        generated during recording to help vocalists keep time.
+        generated during recording to help vocalists keep time. When
+        ``reference_freq`` is given a short beep at that frequency is played
+        before recording starts so singers can match pitch.
         """
         if sd is None:
             raise RuntimeError("sounddevice is not available")
@@ -73,6 +76,9 @@ class MultiTrackRecorder:
                 freq = 880 if (countdown - i) % 2 == 0 else 660
                 utils.beep(freq, samplerate=self.samplerate)
                 time.sleep(1)
+
+        if reference_freq is not None:
+            utils.beep(reference_freq, samplerate=self.samplerate)
 
         frames = int(duration * self.samplerate)
         start = self.position

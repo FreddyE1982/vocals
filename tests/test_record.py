@@ -61,3 +61,24 @@ def test_record_prints_range(tmp_path, monkeypatch, capsys):
     record.record_to_file(str(outfile), duration=1, samplerate=10, show_range=True)
     captured = capsys.readouterr().out
     assert "Pitch range" in captured
+
+
+def test_reference_note_beep(tmp_path, monkeypatch):
+    data = np.zeros(10, dtype=np.float32)
+    sd_stub = types.SimpleNamespace()
+    monkeypatch.setitem(sys.modules, "sounddevice", sd_stub)
+    record = importlib.import_module("vocals.record")
+
+    sd_dummy = DummySD(data, 10)
+    monkeypatch.setattr(record, "sd", sd_dummy)
+    monkeypatch.setattr(record.ringbuffer, "RingBuffer", lambda size: DummyBuffer(size))
+    beeps = []
+    monkeypatch.setattr(
+        record.utils,
+        "beep",
+        lambda freq, samplerate=10, duration=0.2: beeps.append(freq),
+    )
+
+    outfile = tmp_path / "out.wav"
+    record.record_to_file(str(outfile), duration=1, samplerate=10, reference_freq=330.0)
+    assert 330.0 in beeps

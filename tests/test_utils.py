@@ -21,3 +21,8 @@ def test_pitch_range():
     low, high = utils.pitch_range(samples, samplerate=samplerate)
     assert low == pytest.approx(220, rel=0.05)
     assert high == pytest.approx(660, rel=0.05)
+
+
+def test_note_to_freq():
+    assert utils.note_to_freq("A4") == pytest.approx(440.0, rel=0.001)
+    assert utils.note_to_freq("C4") == pytest.approx(261.63, rel=0.01)
