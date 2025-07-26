@@ -1,18 +1,28 @@
 import argparse
+import logging
 import time
+from pathlib import Path
+
 import numpy as np
 
-from . import utils
+from . import __version__, utils
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 try:
     import sounddevice as sd
-except Exception as e:
-    raise SystemExit("sounddevice is required: %s" % e)
+except Exception as e:  # pragma: no cover - system dependency missing
+    raise SystemExit(
+        "The 'sounddevice' package is required. Install it with 'pip install sounddevice'."
+    ) from e
 
 try:
     from . import ringbuffer
-except Exception as e:
-    raise SystemExit("ringbuffer extension not built: %s" % e)
+except Exception as e:  # pragma: no cover - extension not built
+    raise SystemExit(
+        "The ringbuffer extension is not built. Run 'python setup.py build_ext --inplace' first."
+    ) from e
 
 
 def _parse_reference(value):
@@ -40,7 +50,7 @@ def record_to_file(
 
     if countdown > 0:
         for i in range(countdown, 0, -1):
-            print(i)
+            logger.info(i)
             freq = 880 if (countdown - i) % 2 == 0 else 660
             utils.beep(freq, samplerate=samplerate)
             time.sleep(1)
@@ -51,7 +61,7 @@ def record_to_file(
     def callback(indata, frames, time_info, status):
         written = buffer.write(indata.astype("float32").ravel())
         if written < len(indata.ravel()):
-            print("buffer overflow")
+            logger.warning("buffer overflow")
         out = buffer.read(frames * channels)
         if out:
             recorded.append(np.frombuffer(out, dtype=np.float32))
@@ -95,12 +105,18 @@ def record_to_file(
         result = utils.pitch_range(data, samplerate=samplerate)
         if result is not None:
             low, high = result
-            print(f"Pitch range: {low:.1f} Hz - {high:.1f} Hz")
+            logger.info("Pitch range: %.1f Hz - %.1f Hz", low, high)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Record vocals to a WAV file")
     parser.add_argument("outfile", help="Output WAV filename")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("."),
+        help="Directory to write the recording to",
+    )
     parser.add_argument(
         "-d", "--duration", type=float, default=5, help="Duration in seconds"
     )
@@ -129,9 +145,28 @@ def main():
         default=None,
         help="Play a reference note (e.g. A4 or frequency) before recording",
     )
+    parser.add_argument(
+        "--list-devices",
+        action="store_true",
+        help="List available audio devices and exit",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
     args = parser.parse_args()
+
+    if args.list_devices:
+        for idx, info in enumerate(sd.query_devices()):
+            print(f"{idx}: {info['name']}")
+        return
+
+    outpath = args.outfile
+    if not Path(outpath).is_absolute():
+        outpath = args.output_dir / outpath
     record_to_file(
-        args.outfile,
+        str(outpath),
         args.duration,
         args.rate,
         countdown=args.countdown,

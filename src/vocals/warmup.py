@@ -1,7 +1,11 @@
+"""Simple CLI utility to play a vocal warmup scale."""
+
 import argparse
 import math
 
 from . import utils
+
+__all__ = ["warmup"]
 
 
 def warmup(

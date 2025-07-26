@@ -1,4 +1,4 @@
-from setuptools import setup, Extension
+from setuptools import Extension, setup
 
 ringbuffer_ext = Extension(
     "vocals.ringbuffer",

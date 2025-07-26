@@ -1,0 +1,18 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: pip install black isort mypy
+      - run: python setup.py build_ext --inplace
+      - run: pip install -e .
+      - run: black --check .
+      - run: isort --check-only .
+      - run: mypy src || true
+      - run: pytest -q

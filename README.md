@@ -54,6 +54,13 @@ To build the extension in place run:
 ```bash
 pip install -r requirements.txt
 python setup.py build_ext --inplace
+pip install -e .
+```
+
+You can also build the project inside a Docker container:
+
+```bash
+docker build -t vocals .
 ```
 
 Recording requires the PortAudio library to be available on the system.

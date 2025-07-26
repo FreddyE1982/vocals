@@ -1,9 +1,9 @@
 import time
 from typing import List
 
-from . import utils
-
 import numpy as np
+
+from . import utils
 
 try:
     import sounddevice as sd
