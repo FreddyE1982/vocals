@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from vocals.multitrack import MultiTrackRecorder
 
 

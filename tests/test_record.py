@@ -1,7 +1,10 @@
-import numpy as np
 import importlib
+import logging
 import sys
 import types
+
+import numpy as np
+import pytest
 
 
 class DummyBuffer:
@@ -44,7 +47,7 @@ class DummySD:
         pass
 
 
-def test_record_prints_range(tmp_path, monkeypatch, capsys):
+def test_record_prints_range(tmp_path, monkeypatch, caplog):
     data = np.sin(2 * np.pi * 440 * np.linspace(0, 1, 10, False)).astype(np.float32)
 
     sd_stub = types.SimpleNamespace()
@@ -58,9 +61,9 @@ def test_record_prints_range(tmp_path, monkeypatch, capsys):
         record.utils, "pitch_range", lambda samples, samplerate=10: (430.0, 450.0)
     )
     outfile = tmp_path / "out.wav"
+    caplog.set_level(logging.INFO)
     record.record_to_file(str(outfile), duration=1, samplerate=10, show_range=True)
-    captured = capsys.readouterr().out
-    assert "Pitch range" in captured
+    assert any("Pitch range" in msg for msg in caplog.text.splitlines())
 
 
 def test_reference_note_beep(tmp_path, monkeypatch):
@@ -82,3 +85,35 @@ def test_reference_note_beep(tmp_path, monkeypatch):
     outfile = tmp_path / "out.wav"
     record.record_to_file(str(outfile), duration=1, samplerate=10, reference_freq=330.0)
     assert 330.0 in beeps
+
+
+def test_cli_version(monkeypatch, capsys):
+    sd_stub = types.SimpleNamespace(query_devices=lambda: [])
+    monkeypatch.setitem(sys.modules, "sounddevice", sd_stub)
+    record = importlib.import_module("vocals.record")
+    import importlib as _importlib
+
+    record = _importlib.reload(record)
+    monkeypatch.setattr(record.ringbuffer, "RingBuffer", lambda size: DummyBuffer(size))
+    monkeypatch.setattr(record, "record_to_file", lambda *a, **k: None)
+    monkeypatch.setattr(sys, "argv", ["vocals.record", "dummy.wav", "--version"])
+    with pytest.raises(SystemExit) as exc:
+        record.main()
+    assert exc.value.code == 0
+    assert str(record.__version__) in capsys.readouterr().out
+
+
+def test_cli_list_devices(monkeypatch, capsys):
+    devices = [{"name": "mic"}, {"name": "speaker"}]
+    sd_stub = types.SimpleNamespace(query_devices=lambda: devices)
+    monkeypatch.setitem(sys.modules, "sounddevice", sd_stub)
+    record = importlib.import_module("vocals.record")
+    import importlib as _importlib
+
+    record = _importlib.reload(record)
+    monkeypatch.setattr(record.ringbuffer, "RingBuffer", lambda size: DummyBuffer(size))
+    monkeypatch.setattr(record, "record_to_file", lambda *a, **k: None)
+    monkeypatch.setattr(sys, "argv", ["vocals.record", "dummy.wav", "--list-devices"])
+    record.main()
+    output = capsys.readouterr().out
+    assert "mic" in output and "speaker" in output
